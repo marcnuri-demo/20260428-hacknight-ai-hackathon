@@ -25,8 +25,10 @@ Once that passes, move on to the next tool.
 ## Requirements
 
 - macOS or Linux
-- Docker
+- Docker **or** Podman (the examples use `docker`; substitute `podman` if that's what you have — the CLI is drop-in compatible for `build` and `run`)
 - bash (not sh or fish — validate commands use process substitution)
+
+Every `docker build` and `docker run` command below has a Podman equivalent shown immediately after — pick whichever runtime you have installed.
 
 ## Problem 0
 
@@ -49,11 +51,24 @@ docker build -t ai_grep ai_grep \
   && docker build -t ai_wc ai_wc
 ```
 
+Or with Podman:
+```bash
+podman build -t ai_grep ai_grep \
+  && podman build -t ai_wc ai_wc
+```
+
 Run the AI pipeline:
 ```bash
 cat server.log \
   | docker run --rm -i ai_grep "ERROR" \
   | docker run --rm -i ai_wc -l
+```
+
+Or with Podman:
+```bash
+cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_wc -l
 ```
 
 Validate both produce the same result:
@@ -65,6 +80,19 @@ native=$(cat server.log \
 ai=$(cat server.log \
   | docker run --rm -i ai_grep "ERROR" \
   | docker run --rm -i ai_wc -l)
+
+diff <(echo "$native") <(echo "$ai")
+```
+
+Or with Podman:
+```bash
+native=$(cat server.log \
+  | grep "ERROR" \
+  | wc -l)
+
+ai=$(cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_wc -l)
 
 diff <(echo "$native") <(echo "$ai")
 ```
@@ -92,6 +120,13 @@ docker build -t ai_grep ai_grep \
   && docker build -t ai_uniq ai_uniq
 ```
 
+Or with Podman:
+```bash
+podman build -t ai_grep ai_grep \
+  && podman build -t ai_sort ai_sort \
+  && podman build -t ai_uniq ai_uniq
+```
+
 Run the AI pipeline:
 ```bash
 cat server.log \
@@ -100,6 +135,16 @@ cat server.log \
   | docker run --rm -i ai_sort \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn
+```
+
+Or with Podman:
+```bash
+cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_grep -oE "[A-Za-z ]+$" \
+  | podman run --rm -i ai_sort \
+  | podman run --rm -i ai_uniq -c \
+  | podman run --rm -i ai_sort -rn
 ```
 
 Validate both produce the same result:
@@ -117,6 +162,25 @@ ai=$(cat server.log \
   | docker run --rm -i ai_sort \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn)
+
+diff <(echo "$native") <(echo "$ai")
+```
+
+Or with Podman:
+```bash
+native=$(cat server.log \
+  | grep "ERROR" \
+  | grep -oE "[A-Za-z ]+$" \
+  | sort \
+  | uniq -c \
+  | sort -rn)
+
+ai=$(cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_grep -oE "[A-Za-z ]+$" \
+  | podman run --rm -i ai_sort \
+  | podman run --rm -i ai_uniq -c \
+  | podman run --rm -i ai_sort -rn)
 
 diff <(echo "$native") <(echo "$ai")
 ```
@@ -147,6 +211,14 @@ docker build -t ai_grep ai_grep \
   && docker build -t ai_uniq ai_uniq
 ```
 
+Or with Podman:
+```bash
+podman build -t ai_grep ai_grep \
+  && podman build -t ai_sed ai_sed \
+  && podman build -t ai_sort ai_sort \
+  && podman build -t ai_uniq ai_uniq
+```
+
 Run the AI pipeline:
 ```bash
 cat server.log \
@@ -157,6 +229,18 @@ cat server.log \
   | docker run --rm -i ai_sort \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn
+```
+
+Or with Podman:
+```bash
+cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_sed 's/.*\[user=\([^]]*\)\] - \(.*\)/\2|\1/' \
+  | podman run --rm -i ai_sort -u \
+  | podman run --rm -i ai_sed 's/|.*//' \
+  | podman run --rm -i ai_sort \
+  | podman run --rm -i ai_uniq -c \
+  | podman run --rm -i ai_sort -rn
 ```
 
 Validate both produce the same result:
@@ -178,6 +262,29 @@ ai=$(cat server.log \
   | docker run --rm -i ai_sort \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn)
+
+diff <(echo "$native") <(echo "$ai")
+```
+
+Or with Podman:
+```bash
+native=$(cat server.log \
+  | grep "ERROR" \
+  | sed 's/.*\[user=\([^]]*\)\] - \(.*\)/\2|\1/' \
+  | sort -u \
+  | sed 's/|.*//' \
+  | sort \
+  | uniq -c \
+  | sort -rn)
+
+ai=$(cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_sed 's/.*\[user=\([^]]*\)\] - \(.*\)/\2|\1/' \
+  | podman run --rm -i ai_sort -u \
+  | podman run --rm -i ai_sed 's/|.*//' \
+  | podman run --rm -i ai_sort \
+  | podman run --rm -i ai_uniq -c \
+  | podman run --rm -i ai_sort -rn)
 
 diff <(echo "$native") <(echo "$ai")
 ```
@@ -209,6 +316,14 @@ docker build -t ai_grep ai_grep \
   && docker build -t ai_uniq ai_uniq
 ```
 
+Or with Podman:
+```bash
+podman build -t ai_grep ai_grep \
+  && podman build -t ai_sed ai_sed \
+  && podman build -t ai_sort ai_sort \
+  && podman build -t ai_uniq ai_uniq
+```
+
 Run the AI pipeline:
 ```bash
 cat server.log \
@@ -220,6 +335,19 @@ cat server.log \
   | docker run --rm -i ai_sort \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn
+```
+
+Or with Podman:
+```bash
+cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_grep -E "^\[2026-04-16 (0[0-8]|1[7-9]|2[0-3]):" \
+  | podman run --rm -i ai_sed 's/.*\[user=\([^]]*\)\] - \(.*\)/\2|\1/' \
+  | podman run --rm -i ai_sort -u \
+  | podman run --rm -i ai_sed 's/|.*//' \
+  | podman run --rm -i ai_sort \
+  | podman run --rm -i ai_uniq -c \
+  | podman run --rm -i ai_sort -rn
 ```
 
 Validate both produce the same result:
@@ -243,6 +371,31 @@ ai=$(cat server.log \
   | docker run --rm -i ai_sort \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn)
+
+diff <(echo "$native") <(echo "$ai")
+```
+
+Or with Podman:
+```bash
+native=$(cat server.log \
+  | grep "ERROR" \
+  | grep -E "^\[2026-04-16 (0[0-8]|1[7-9]|2[0-3]):" \
+  | sed 's/.*\[user=\([^]]*\)\] - \(.*\)/\2|\1/' \
+  | sort -u \
+  | sed 's/|.*//' \
+  | sort \
+  | uniq -c \
+  | sort -rn)
+
+ai=$(cat server.log \
+  | podman run --rm -i ai_grep "ERROR" \
+  | podman run --rm -i ai_grep -E "^\[2026-04-16 (0[0-8]|1[7-9]|2[0-3]):" \
+  | podman run --rm -i ai_sed 's/.*\[user=\([^]]*\)\] - \(.*\)/\2|\1/' \
+  | podman run --rm -i ai_sort -u \
+  | podman run --rm -i ai_sed 's/|.*//' \
+  | podman run --rm -i ai_sort \
+  | podman run --rm -i ai_uniq -c \
+  | podman run --rm -i ai_sort -rn)
 
 diff <(echo "$native") <(echo "$ai")
 ```

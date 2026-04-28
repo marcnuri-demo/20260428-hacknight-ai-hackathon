@@ -1,1 +1,36 @@
-.cloude
+# Claude Code local files
+.claude/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Go build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Local per-tool build output (each tool may produce a binary named after itself)
+ai_grep/ai_grep
+ai_sed/ai_sed
+ai_sort/ai_sort
+ai_uniq/ai_uniq
+ai_wc/ai_wc
+
+# Environment / secrets
+.env
+.env.local

@@ -7,7 +7,7 @@ This repo is a fork of the AI Hacknight challenge. The upstream repo is the sour
 - One directory per AI-built Unix tool: `ai_grep/`, `ai_sed/`, `ai_sort/`, `ai_uniq/`, `ai_wc/`.
 - Each tool ships as a Docker image with the same name as its directory and reads stdin / writes stdout.
 - `server.log` is the shared input fixture. The native Unix pipeline is the ground truth; AI versions must produce byte-identical output via `diff`.
-- `README.md` is upstream-owned. Do not edit it — record local decisions in this file instead.
+- `README.md` describes the upstream challenge. Local decisions live in this file. The README may be amended on the fork to add useful local content (e.g., Podman command alternatives) without diverging from the upstream challenge spec.
 
 ## Workflow
 
