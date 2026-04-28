@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build & test ${{ matrix.tool }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [ai_grep, ai_sed, ai_sort, ai_uniq, ai_wc]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect implementation
+        id: detect
+        run: |
+          if [[ -f "${{ matrix.tool }}/go.mod" ]]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ -f "${{ matrix.tool }}/Dockerfile" ]]; then
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Go
+        if: steps.detect.outputs.go == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: ${{ matrix.tool }}/go.sum
+
+      - name: go build & test
+        if: steps.detect.outputs.go == 'true'
+        working-directory: ${{ matrix.tool }}
+        run: |
+          go build ./...
+          go test ./...
+
+      - name: Build container image
+        if: steps.detect.outputs.docker == 'true'
+        run: docker build -t ${{ matrix.tool }} ${{ matrix.tool }}
+
+  validate:
+    name: Validate Problem ${{ matrix.problem }}
+    needs: build-test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - problem: 0
+            tools: ai_grep ai_wc
+          - problem: 1
+            tools: ai_grep ai_sort ai_uniq
+          - problem: 2
+            tools: ai_grep ai_sed ai_sort ai_uniq
+          - problem: 3
+            tools: ai_grep ai_sed ai_sort ai_uniq
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required tools are implemented
+        id: check
+        run: |
+          all_present=true
+          missing=""
+          for tool in ${{ matrix.tools }}; do
+            if [[ ! -f "$tool/Dockerfile" ]]; then
+              all_present=false
+              missing="$missing $tool"
+            fi
+          done
+          echo "all_present=$all_present" >> "$GITHUB_OUTPUT"
+          if [[ "$all_present" == "false" ]]; then
+            echo "Skipping — missing tools:$missing"
+          fi
+
+      - name: Build images
+        if: steps.check.outputs.all_present == 'true'
+        run: |
+          for tool in ${{ matrix.tools }}; do
+            docker build -t "$tool" "$tool"
+          done
+
+      - name: Validate Problem ${{ matrix.problem }}
+        if: steps.check.outputs.all_present == 'true'
+        run: bash .github/scripts/validate.sh ${{ matrix.problem }}
+
+  publish:
+    name: Publish ${{ matrix.tool }} to GHCR
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [ai_grep, ai_sed, ai_sort, ai_uniq, ai_wc]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect implementation
+        id: detect
+        run: |
+          if [[ -f "${{ matrix.tool }}/Dockerfile" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        if: steps.detect.outputs.exists == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.detect.outputs.exists == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.tool }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.tool }}:latest
+            ghcr.io/${{ github.repository }}/${{ matrix.tool }}:${{ github.sha }}
