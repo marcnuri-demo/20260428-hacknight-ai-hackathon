@@ -92,9 +92,7 @@ jobs:
 
       - name: Set up Docker (Colima)
         if: steps.check.outputs.all_present == 'true'
-        run: |
-          brew install colima docker
-          colima start --cpu 2 --memory 4 --disk 10
+        uses: douglascamata/setup-docker-macos-action@v1.1.0
 
       - name: Build images
         if: steps.check.outputs.all_present == 'true'
