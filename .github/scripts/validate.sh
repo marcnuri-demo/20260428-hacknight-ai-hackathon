@@ -85,7 +85,13 @@ case "$problem" in
     ;;
 esac
 
-if diff <(echo "$native") <(echo "$ai"); then
+# `diff -w` ignores whitespace differences between the native and AI
+# pipelines. BSD `wc -l` (and `uniq -c`) right-pad numeric output with
+# leading spaces; GNU equivalents do not. Both outputs are functionally
+# identical — same counts, same ordering — so we treat whitespace-only
+# differences as equivalent rather than forcing every AI tool to mimic
+# the host's platform-specific padding.
+if diff -w <(echo "$native") <(echo "$ai"); then
   echo "Problem $problem: PASS"
 else
   echo "Problem $problem: FAIL" >&2
