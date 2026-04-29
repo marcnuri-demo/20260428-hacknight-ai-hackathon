@@ -25,10 +25,14 @@ func main() {
 // run reads `in`, collapses adjacent duplicate lines, and writes results to
 // `out`. Output is always `\n`-terminated, matching GNU uniq's normalization
 // even when the input's final line lacks a terminator.
-func run(in io.Reader, out io.Writer, count bool) error {
+func run(in io.Reader, out io.Writer, count bool) (retErr error) {
 	r := bufio.NewReader(in)
 	w := bufio.NewWriter(out)
-	defer w.Flush()
+	defer func() {
+		if err := w.Flush(); err != nil && retErr == nil {
+			retErr = err
+		}
+	}()
 
 	var prev string
 	var have bool
