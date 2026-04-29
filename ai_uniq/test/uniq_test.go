@@ -40,12 +40,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(tmp)
 	binPath = filepath.Join(tmp, "ai_uniq")
 
 	build := exec.Command("go", "build", "-o", binPath, ".")
 	build.Dir = toolDir
 	if out, err := build.CombinedOutput(); err != nil {
+		os.RemoveAll(tmp)
 		panic("go build failed: " + err.Error() + "\n" + string(out))
 	}
 
@@ -57,7 +57,9 @@ func TestMain(m *testing.M) {
 		gnuUniq = true
 	}
 
-	os.Exit(m.Run())
+	code := m.Run()
+	os.RemoveAll(tmp)
+	os.Exit(code)
 }
 
 // pipe runs cmdName with args, feeding `input` on stdin, and returns stdout.
