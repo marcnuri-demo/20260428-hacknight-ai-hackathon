@@ -54,7 +54,11 @@ jobs:
   validate:
     name: Validate Problem ${{ matrix.problem }}
     needs: build-test
-    runs-on: ubuntu-latest
+    # Pinned to macOS so the host's `wc` (BSD) matches the upstream
+    # reference environment used by ai_wc/wc.py. GNU `wc -l` on Linux
+    # outputs "302\n" while BSD `wc -l` outputs "     302\n", which is
+    # what wc.py reproduces via f"{lines:>8}".
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
@@ -85,6 +89,12 @@ jobs:
           if [[ "$all_present" == "false" ]]; then
             echo "Skipping — missing tools:$missing"
           fi
+
+      - name: Set up Docker (Colima)
+        if: steps.check.outputs.all_present == 'true'
+        run: |
+          brew install colima docker
+          colima start --cpu 2 --memory 4 --disk 10
 
       - name: Build images
         if: steps.check.outputs.all_present == 'true'
