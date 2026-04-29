@@ -6,6 +6,8 @@ The theme running through the problems is processing a web server log. You'll an
 
 The twist is you already have the answer. The native Unix tools are your ground truth: feed both pipelines the same `server.log` and compare. If your AI-built versions match, you win.
 
+The validate steps below use `diff -w` so whitespace-only differences (BSD `wc -l` and `uniq -c` right-pad their numeric output with leading spaces; GNU equivalents do not) don't count as failures — same counts, same ordering, same content is what we're checking for.
+
 The goal is to implement the full AI pipeline for each problem, but you don't have to do it all at once. You can implement one tool at a time and mix native and AI versions in the validate step. For example, if you've only implemented `ai_grep`, you can verify it in isolation by keeping the rest of the pipeline native:
 
 ```bash
@@ -17,7 +19,7 @@ ai=$(cat server.log \
   | docker run --rm -i ai_grep "ERROR" \
   | wc -l)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 Once that passes, move on to the next tool.
@@ -81,7 +83,7 @@ ai=$(cat server.log \
   | docker run --rm -i ai_grep "ERROR" \
   | docker run --rm -i ai_wc -l)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 Or with Podman:
@@ -94,7 +96,7 @@ ai=$(cat server.log \
   | podman run --rm -i ai_grep "ERROR" \
   | podman run --rm -i ai_wc -l)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 No output means the results match.
@@ -163,7 +165,7 @@ ai=$(cat server.log \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 Or with Podman:
@@ -182,7 +184,7 @@ ai=$(cat server.log \
   | podman run --rm -i ai_uniq -c \
   | podman run --rm -i ai_sort -rn)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 No output means the results match.
@@ -263,7 +265,7 @@ ai=$(cat server.log \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 Or with Podman:
@@ -286,7 +288,7 @@ ai=$(cat server.log \
   | podman run --rm -i ai_uniq -c \
   | podman run --rm -i ai_sort -rn)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 No output means the results match.
@@ -372,7 +374,7 @@ ai=$(cat server.log \
   | docker run --rm -i ai_uniq -c \
   | docker run --rm -i ai_sort -rn)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 Or with Podman:
@@ -397,7 +399,7 @@ ai=$(cat server.log \
   | podman run --rm -i ai_uniq -c \
   | podman run --rm -i ai_sort -rn)
 
-diff <(echo "$native") <(echo "$ai")
+diff -w <(echo "$native") <(echo "$ai")
 ```
 
 No output means the results match.
