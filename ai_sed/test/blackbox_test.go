@@ -2,6 +2,7 @@ package blackbox_test
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -136,6 +137,101 @@ func TestSubstituteScenarios(t *testing.T) {
 			want := mustRun(t, "sed", []string{tc.script}, tc.input)
 			if got != want {
 				t.Errorf("output mismatch\nscript: %s\nwant: %q\n got: %q", tc.script, want, got)
+			}
+		})
+	}
+}
+
+func runWithStatus(t *testing.T, name string, args []string, input string) (stdout, stderr string, exit int) {
+	t.Helper()
+	cmd := exec.Command(name, args...)
+	cmd.Stdin = strings.NewReader(input)
+	var outb, errb bytes.Buffer
+	cmd.Stdout = &outb
+	cmd.Stderr = &errb
+	err := cmd.Run()
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			return outb.String(), errb.String(), ee.ExitCode()
+		}
+		t.Fatalf("%s %v: %v", name, args, err)
+	}
+	return outb.String(), errb.String(), 0
+}
+
+func TestSubstituteErrors(t *testing.T) {
+	bin := aiSedBinary(t)
+
+	cases := []struct {
+		name      string
+		args      []string
+		input     string
+		stderrSub string
+	}{
+		{
+			name:      "non-substitute command rejected",
+			args:      []string{"d"},
+			stderrSub: "only 's' command supported",
+		},
+		{
+			name:      "non-slash delimiter rejected",
+			args:      []string{"s|foo|bar|"},
+			stderrSub: "only '/' delimiter supported",
+		},
+		{
+			name:      "missing trailing delimiter rejected",
+			args:      []string{"s/foo/bar"},
+			stderrSub: "malformed substitute",
+		},
+		{
+			name:      "incomplete script rejected",
+			args:      []string{"s/foo"},
+			stderrSub: "malformed substitute",
+		},
+		{
+			name:      "unsupported flag rejected",
+			args:      []string{"s/foo/bar/x"},
+			stderrSub: "not supported",
+		},
+		{
+			name:      "backreference in pattern rejected",
+			args:      []string{`s/\(foo\)\1/x/`},
+			stderrSub: "backreferences in pattern not supported",
+		},
+		{
+			name:      "trailing backslash in replacement rejected",
+			args:      []string{`s/foo/bar\/`},
+			stderrSub: "malformed substitute",
+		},
+		{
+			name:      "empty script rejected",
+			args:      []string{""},
+			stderrSub: "only 's' command supported",
+		},
+		{
+			name:      "no positional argument exits with usage",
+			args:      []string{},
+			stderrSub: "usage:",
+		},
+		{
+			name:      "two positional arguments rejected",
+			args:      []string{"s/a/b/", "extra"},
+			stderrSub: "usage:",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stdout, stderr, exit := runWithStatus(t, bin, tc.args, tc.input)
+			if exit == 0 {
+				t.Fatalf("expected non-zero exit, got 0\nstdout: %q\nstderr: %q", stdout, stderr)
+			}
+			if !strings.Contains(stderr, tc.stderrSub) {
+				t.Errorf("stderr does not contain %q\nstderr: %q", tc.stderrSub, stderr)
+			}
+			if stdout != "" {
+				t.Errorf("expected empty stdout on error, got %q", stdout)
 			}
 		})
 	}
