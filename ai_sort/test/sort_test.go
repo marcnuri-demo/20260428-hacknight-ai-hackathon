@@ -33,6 +33,7 @@ func runPipe(t *testing.T, name string, input string, args ...string) []byte {
 	t.Helper()
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = strings.NewReader(input)
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -90,6 +91,11 @@ func TestSingleLine(t *testing.T) {
 	assertSameAsNative(t, "only-line\n", "-n")
 	assertSameAsNative(t, "only-line\n", "-u")
 	assertSameAsNative(t, "only-line\n", "-rn")
+}
+
+func TestUniqueNumeric(t *testing.T) {
+	input := "5 foo\n5 bar\n5 baz\n3 qux\n3 quux\n"
+	assertSameAsNative(t, input, "-nu")
 }
 
 func TestInputWithoutTrailingNewline(t *testing.T) {

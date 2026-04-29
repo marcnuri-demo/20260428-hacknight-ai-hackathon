@@ -36,7 +36,7 @@ func run(in io.Reader, out io.Writer, reverse, numeric, unique bool) error {
 
 	sort.SliceStable(lines, func(i, j int) bool {
 		c := cmp(lines[i], lines[j])
-		if c == 0 {
+		if c == 0 && !unique {
 			c = bytes.Compare(lines[i], lines[j])
 		}
 		if reverse {
@@ -46,7 +46,7 @@ func run(in io.Reader, out io.Writer, reverse, numeric, unique bool) error {
 	})
 
 	if unique {
-		lines = dedupe(lines)
+		lines = dedupe(lines, cmp)
 	}
 
 	w := bufio.NewWriter(out)
@@ -126,13 +126,13 @@ func parseNumericPrefix(s []byte) float64 {
 	return val
 }
 
-func dedupe(lines [][]byte) [][]byte {
+func dedupe(lines [][]byte, cmp func(a, b []byte) int) [][]byte {
 	if len(lines) == 0 {
 		return lines
 	}
 	out := lines[:1]
 	for i := 1; i < len(lines); i++ {
-		if !bytes.Equal(lines[i], out[len(out)-1]) {
+		if cmp(lines[i], out[len(out)-1]) != 0 {
 			out = append(out, lines[i])
 		}
 	}
